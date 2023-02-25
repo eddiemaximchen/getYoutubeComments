@@ -5,7 +5,7 @@ from pprint import pprint
 from datetime import datetime
 from googleapiclient.discovery import build
 
-YOUTUBE_API_KEY = "AIzaSyCLNdL_6bmA5Gmqyp7u160DBZhF7iBqZ-s"
+YOUTUBE_API_KEY = "Your key"
 MOVIENAME='ironman4'
 def main():
     youtube = build('youtube','v3',developerKey = 'AIzaSyCLNdL_6bmA5Gmqyp7u160DBZhF7iBqZ-s')
