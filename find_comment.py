@@ -28,7 +28,7 @@ def main():
             while 1:
                 video_title, next_page_token = myoutube.get_comments(video_id,video_title,video_url,page_token=next_page_token)
                 print(f"{video_title} is ok")
-                # 如果沒有下一頁留言，則跳離
+                # if no comment then escape
                 if not next_page_token:
                     break
     comm=f"cat *.json | jq -s add >json/comments.json"
@@ -43,7 +43,6 @@ class YoutubeSpider():
         self.api_key = api_key
 
     def get_html_to_json(self, path):
-        """組合 URL 後 GET 網頁並轉換成 JSON"""
         api_url = f"{self.base_url}{path}&key={self.api_key}"
         r = requests.get(api_url)
         if r.status_code == requests.codes.ok:
@@ -53,8 +52,6 @@ class YoutubeSpider():
         return data
 
     def get_channel_uploads_id(self, channel_id, part='contentDetails'):
-        """取得頻道上傳影片清單的ID"""
-        # UCVSo1xVSPS_CyZnswCjpEyQ
         path = f'channels?part={part}&id={channel_id}'
         data = self.get_html_to_json(path)
         try:
@@ -64,8 +61,6 @@ class YoutubeSpider():
         return uploads_id
 
     def get_playlist(self, playlist_id, part='contentDetails', max_results=10):
-        """取得影片清單ID中的影片"""
-        # UU7ia-A8gma8qcdC6GDcjwsQ
         path = f'playlistItems?part={part}&playlistId={playlist_id}&maxResults={max_results}'
         data = self.get_html_to_json(path)
         if not data:
@@ -77,22 +72,13 @@ class YoutubeSpider():
         return video_ids
 
     def get_video(self, video_id, part='snippet,statistics'):
-        """取得影片資訊"""
+
         # part = 'contentDetails,id,liveStreamingDetails,localizations,player,recordingDetails,snippet,statistics,status,topicDetails'
         path = f'videos?part={part}&id={video_id}'
         data = self.get_html_to_json(path)
         if not data:
             return {}
-        # 以下整理並提取需要的資料
         data_item = data['items'][0]
-
-        #date-time object無法存入json file
-        # try:
-            # 2019-09-29T04:17:05Z
-            #time_ = datetime.strptime(data_item['snippet']['publishedAt'], '%Y-%m-%dT%H:%M:%SZ')
-        # except ValueError:
-            # 日期格式錯誤
-            # time_ = None
 
         url_ = f"https://www.youtube.com/watch?v={data_item['id']}"
 
@@ -104,21 +90,19 @@ class YoutubeSpider():
             'title': data_item['snippet']['title'],
             #'description': data_item['snippet']['description'],
             #'likeCount': data_item['statistics']['likeCount'],
-            # 'commentCount': data_item['statistics']['commentCount'], #有空值存在導致程式出錯 且後面沒有用到
+            # 'commentCount': data_item['statistics']['commentCount'], # will have NA and cause Error
             #'viewCount': data_item['statistics']['viewCount']
         }
         return info
 
     def get_comments(self, video_id,video_title,video_url, page_token='', part='snippet', max_results=100):
-        """取得影片留言"""
         path = f'commentThreads?part={part}&videoId={video_id}&maxResults={max_results}&pageToken={page_token}'
         data = self.get_html_to_json(path)
         if not data:
             return [], ''
-        # 下一頁的數值
         next_page_token = data.get('nextPageToken', '')
 
-        # 以下整理並提取需要的資料
+        # prepare json file
         comments = []
         count=0
         prev_id=''
@@ -126,12 +110,6 @@ class YoutubeSpider():
         for data_item in data['items']:
             data_item = data_item['snippet']
             top_comment = data_item['topLevelComment']
-            try:
-                # 2020-08-03T16:00:56Z
-                time_ = datetime.strptime(top_comment['snippet']['publishedAt'], '%Y-%m-%dT%H:%M:%SZ')
-            except ValueError:
-                # 日期格式錯誤
-                time_ = None
 
             if 'authorChannelId' in top_comment['snippet']:
                 ru_id = top_comment['snippet']['authorChannelId']['value']
@@ -148,19 +126,18 @@ class YoutubeSpider():
                 'movie_url':video_url,
                 'ru_id': ru_id,
                 #'ru_name': ru_name,
-                # 'reply_time': time_,
                 'reply_content': top_comment['snippet']['textOriginal'],
                 #'rm_positive': int(top_comment['snippet']['likeCount']),
                 'rn_comment': int(data_item['totalReplyCount'])#回覆的回覆
             })
-            if prev_id==ru_id and prev_comt==top_comment['snippet']['textOriginal']: #防止存到重複的留言
+            if prev_id==ru_id and prev_comt==top_comment['snippet']['textOriginal']: #prevent redundent in the same video
                 continue 
             else:
                 with open(f"{count}.json", "w", encoding="utf-8") as file:
                     file.write(json.dumps(comments, ensure_ascii=False, indent=4))
             prev_id=ru_id
             prev_comt=top_comment['snippet']['textOriginal']
-            count=count+1 #會出現檔名太長無法儲存的情形 且是暫存檔 合併後會刪除 所以用流水號代替檔名
+            count=count+1 #these file is temp file and will combine in the end and file name can be too long causing saving problem,therefore use count.
         return video_title, next_page_token
 
 
