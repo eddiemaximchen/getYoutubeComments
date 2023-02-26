@@ -1,8 +1,6 @@
 import requests
 import json
 import os
-from pprint import pprint
-from datetime import datetime
 from googleapiclient.discovery import build
 
 YOUTUBE_API_KEY = "Your key"
@@ -85,12 +83,11 @@ class YoutubeSpider():
         info = {
             #'id': data_item['id'],
             'channelTitle': data_item['snippet']['channelTitle'],
-            # 'publishedAt': time_,
             'video_url': url_,
             'title': data_item['snippet']['title'],
             #'description': data_item['snippet']['description'],
             #'likeCount': data_item['statistics']['likeCount'],
-            # 'commentCount': data_item['statistics']['commentCount'], # will have NA and cause Error
+            #'commentCount': data_item['statistics']['commentCount'], # will have NA and cause Error
             #'viewCount': data_item['statistics']['viewCount']
         }
         return info
